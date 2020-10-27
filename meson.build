@@ -11,8 +11,17 @@ xdamage = dependency('xdamage')
 xext = dependency('xext')
 vlc = dependency('libvlc')
 
-moc_files = qt5.preprocess(qresources: 'qml.qrc')
+moc_files = qt5.preprocess(
+    moc_headers: [
+        'RenderWindow.hpp',
+        'RenderClient.hpp',
+    ],
+    qresources: 'qml.qrc')
 
-executable('myprog', 'main.cpp',
-           moc_files,
-           dependencies : [qt5_dep, x11, xcomposite, xrender, xdamage, xext, vlc])
+executable('myprog',
+    'main.cpp',
+    'RenderWindow.cpp',
+    'RenderClient.cpp',
+    moc_files,
+    dependencies : [qt5_dep, x11, xcomposite, xrender, xdamage, xext, vlc]
+)

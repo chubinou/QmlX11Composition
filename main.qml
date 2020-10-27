@@ -5,6 +5,9 @@ Rectangle {
     visible: true
     color: "red"
     opacity: 0.5
+    border.width: 5
+    border.color: "blue"
+
     Text {
         id: text
         text: "This is QML code."
@@ -18,6 +21,16 @@ Rectangle {
             loops: Animation.Infinite
         }
     }
-	Component.onCompleted: animation.start()
 
+    MouseArea {
+        anchors.fill: parent
+        onClicked: {
+            console.log("pop pop")
+        }
+    }
+    Keys.onPressed: {
+        console.log("yayaya")
+    }
+
+    Component.onCompleted: animation.start()
 }
