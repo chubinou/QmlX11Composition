@@ -19,6 +19,8 @@
 #include <unistd.h>
 #include <time.h>
 
+#include <vlc/vlc.h>
+
 #define panic(x...) do {fprintf(stderr, x); abort();} while(0)
 
 Display *dpy;
@@ -46,6 +48,7 @@ public:
     Server()
     {
         m_widget = new QWidget();
+        m_widget->resize(800, 600);
         m_widget->setAttribute(Qt::WA_NativeWindow);
         m_widget->setAttribute(Qt::WA_OpaquePaintEvent);
         m_widget->setAttribute(Qt::WA_NoSystemBackground);
@@ -55,7 +58,7 @@ public:
         //m_widget->setPalette(palette);
         m_wid = m_widget->winId();
 
-        m_background = XCreatePixmap(dpy, m_wid, 640, 480, depth);
+        m_background = XCreatePixmap(dpy, m_wid, 800, 600, depth);
         XSelectInput(dpy, m_wid, StructureNotifyMask);
         XSetWindowBackgroundPixmap(dpy, m_wid, m_background);
         XMapWindow(dpy, m_wid);
@@ -154,6 +157,8 @@ private:
 int main(int argc, char** argv)
 {
     QApplication app(argc, argv);
+
+
     assert(QX11Info::isPlatformX11());
     init();
 
@@ -167,30 +172,55 @@ int main(int argc, char** argv)
     view.setFlag(Qt::WindowType::WindowTransparentForInput);
     view.setColor(QColor(Qt::transparent));
     view.setResizeMode( QQuickView::SizeRootObjectToView );
-    view.setGeometry( 100, 100, 500, 500 );
+    view.setGeometry( 100, 100, 800, 600);
     view.show();
 
 
     Client client((Window) view.winId());
     client.show();
 
-    XRenderColor green      ={0x0FF0,   0xF00F, 0x00FF,0xFFFF};
-    XRenderColor blackAplha ={0,        0,      0,      0x8888};
+
+    auto videoWidget = new QWidget();
+
+    videoWidget->setAttribute(Qt::WA_NativeWindow);
+    videoWidget->setWindowFlag(Qt::WindowType::BypassWindowManagerHint);
+    videoWidget->setWindowFlag(Qt::WindowType::WindowTransparentForInput);
+    videoWidget->resize(800, 600);
+
+    videoWidget->show();
+    Client client2((Window) videoWidget->winId());
+    client2.show();
+
+
+    libvlc_instance_t* vlc = libvlc_new(0, nullptr);
+    auto m = libvlc_media_new_location(vlc, "file:///home/pierre/Videos/Doctor.Who.2005.S08E06.720p.HDTV.x265.mp4");
+    libvlc_media_player_t* mp = libvlc_media_player_new_from_media(m);
+    libvlc_media_release (m);
+    libvlc_media_player_set_xwindow(mp, videoWidget->winId());
+
+    libvlc_media_player_play (mp);
 
     QObject::connect(&view, &QQuickView::afterRendering, [&]() {
+        Picture pic;
+
         XFlush(dpy);
 
         auto  drawing =  server.getBackTexture();
-        XRenderFillRectangle(dpy, PictOpOver, drawing, &green, 0, 0, 640, 480);
-        blackAplha.red += 0x800;
-        qDebug() << "draw" << blackAplha.red;
 
-        Picture pic = client.getPicture();
+        int realW = 800 * view.devicePixelRatio();
+        int realH = 600 * view.devicePixelRatio();
+
+        pic = client2.getPicture();
         XRenderComposite(dpy, PictOpOver, pic, 0, drawing,
                          0,0, 0, 0,
-                         0, 0, 500, 500);
+                         0, 0, realW, realH);
 
-        XClearArea(dpy, server.getWindow(), 0, 0, 640, 480, 0);
+        pic = client.getPicture();
+        XRenderComposite(dpy, PictOpOver, pic, 0, drawing,
+                         0,0, 0, 0,
+                         0, 0, realW, realH);
+
+        XClearArea(dpy, server.getWindow(), 0, 0, realW, realH, 0);
     });
 
     app.exec();

@@ -9,9 +9,10 @@ xcomposite = dependency('xcomposite')
 xrender = dependency('xrender')
 xdamage = dependency('xdamage')
 xext = dependency('xext')
+vlc = dependency('libvlc')
 
 moc_files = qt5.preprocess(qresources: 'qml.qrc')
 
 executable('myprog', 'main.cpp',
            moc_files,
-           dependencies : [qt5_dep, x11, xcomposite, xrender, xdamage, xext])
+           dependencies : [qt5_dep, x11, xcomposite, xrender, xdamage, xext, vlc])
