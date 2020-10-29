@@ -7,8 +7,8 @@
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrender.h>
 
-#include "RenderClient.hpp"
 
+class RenderClient;
 class RenderWindow : public QWidget
 {
     Q_OBJECT
@@ -17,7 +17,7 @@ public:
 
     void refresh();
 
-    bool eventFilter(QObject *watched, QEvent *event) override;
+    bool eventFilter(QObject *, QEvent *event) override;
 
 
     inline Window getWindow() {
@@ -28,8 +28,9 @@ public:
         return m_drawingarea;
     }
 
-    inline void setVideoClient(RenderClient* client) {
+    inline void setVideoClient(RenderClient* client, QWindow* window) {
         m_videoClient = client;
+        m_videoWindow = window;
     }
 
     inline void setInterfaceClient(RenderClient* client, QWindow* window) {
@@ -37,11 +38,18 @@ public:
         m_interfaceWindow = window;
     }
 
+protected:
+    void paintEvent(QPaintEvent *event) override;
+    void keyPressEvent(QKeyEvent *ev) override;
+    void keyReleaseEvent(QKeyEvent *ev) override;
+
 
 private:
+    QWindow* m_videoWindow = nullptr;
     RenderClient* m_videoClient = nullptr;
     QWindow* m_interfaceWindow = nullptr;
     RenderClient* m_interfaceClient = nullptr;
+
     Display* m_dpy = 0;
     Window m_wid = 0;
     Pixmap m_background = 0;

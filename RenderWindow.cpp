@@ -4,7 +4,11 @@
 #include <QQuickItem>
 #include <QX11Info>
 #include "RenderWindow.hpp"
+#include "RenderClient.hpp"
 
+#undef KeyPress
+#undef KeyRelease
+#undef None
 
 RenderWindow::RenderWindow(QWidget *parent)
     : QWidget(parent)
@@ -19,14 +23,15 @@ RenderWindow::RenderWindow(QWidget *parent)
 
     XRenderPictFormat* fmt = XRenderFindVisualFormat(m_dpy, visual);
     int depth = DefaultDepth(m_dpy, screen);
+    int width = DisplayWidth(m_dpy, screen);
+    int height = DisplayHeight(m_dpy, screen);
 
-    show();
     m_wid = winId();
 
-    m_background = XCreatePixmap(m_dpy, m_wid, 800, 600, depth);
-    XSelectInput(m_dpy, m_wid, StructureNotifyMask);
+    m_background = XCreatePixmap(m_dpy, m_wid, width, height, depth);
+    //XSelectInput(m_dpy, m_wid, StructureNotifyMask);
     XSetWindowBackgroundPixmap(m_dpy, m_wid, m_background);
-    XMapWindow(m_dpy, m_wid);
+    //XMapWindow(m_dpy, m_wid);
 
     XRenderPictureAttributes pict_attr;
     pict_attr.poly_edge=PolyEdgeSmooth;
@@ -34,15 +39,18 @@ RenderWindow::RenderWindow(QWidget *parent)
     m_drawingarea = XRenderCreatePicture(m_dpy, m_background, fmt, CPPolyEdge|CPPolyMode,
                                          &pict_attr);
 
-    installEventFilter(this);
+    installEventFilter(this);//this->windowHandle());
+
+    show();
+
 }
 
 void RenderWindow::refresh()
 {
     Picture pic;
 
+    XGrabServer(m_dpy); //avoids tearing by locking the server
     XFlush(m_dpy);
-
 
     int realW = width()  * devicePixelRatioF();
     int realH = height() * devicePixelRatioF();
@@ -62,14 +70,10 @@ void RenderWindow::refresh()
     }
 
     XClearArea(m_dpy, m_wid, 0, 0, realW, realH, 0);
+    XUngrabServer(m_dpy);
 }
 
-#ifdef KeyPress
-#undef KeyPress
-#endif
-#ifdef KeyRelease
-#undef KeyRelease
-#endif
+
 
 static void remapInputMethodQueryEvent(QObject *object, QInputMethodQueryEvent *e)
 {
@@ -98,16 +102,28 @@ static void remapInputMethodQueryEvent(QObject *object, QInputMethodQueryEvent *
 
 bool RenderWindow::eventFilter(QObject*, QEvent* event)
 {
-    assert(m_interfaceWindow);
+    if (!m_interfaceWindow)
+        return false;
+
+    qDebug() << "type: "  << event->type();
     switch (event->type()) {
+
     case QEvent::Move:
     case QEvent::Show:
+    {
+        //m_interfaceWindow->setPosition(pos());
         refresh();
         break;
+    }
 
     case QEvent::Resize:
     {
-        //m_interfaceWindow->resize(size());
+        QResizeEvent* resizeEvent = static_cast<QResizeEvent*>(event);
+        m_interfaceWindow->resize(resizeEvent->size());
+        m_videoWindow->resize(resizeEvent->size());
+
+        m_videoClient->geometryChanged();
+        m_interfaceClient->geometryChanged();
         refresh();
         break;
     }
@@ -168,8 +184,27 @@ bool RenderWindow::eventFilter(QObject*, QEvent* event)
     case QEvent::KeyRelease:
         return QCoreApplication::sendEvent(m_interfaceWindow, event);
 
-
+    case QEvent::ScreenChangeInternal:
+        m_interfaceWindow->setScreen(windowHandle()->screen());
+        break;
     default: break;
     }
     return false;
+}
+
+void RenderWindow::paintEvent(QPaintEvent* event)
+{
+    qDebug() << "paintEvent";
+    QWidget::paintEvent(event);
+    refresh();
+}
+
+void RenderWindow::keyPressEvent(QKeyEvent* ev)
+{
+    qDebug() << "You Pressed Key " << ev->text();
+}
+
+void RenderWindow::keyReleaseEvent(QKeyEvent* ev)
+{
+    qDebug() << "You Pressed Key " << ev->text();
 }

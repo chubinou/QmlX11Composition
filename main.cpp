@@ -5,24 +5,13 @@
 #include <QWidget>
 #include <QTimer>
 #include <QX11Info>
-
-#include <X11/Xlib.h>
-#include <X11/X.h>
-#include <X11/extensions/Xfixes.h>
-#include <X11/extensions/Xrender.h>
-#include <X11/extensions/Xcomposite.h>
-#include <X11/extensions/Xdamage.h>
-#include <X11/extensions/shape.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-#include <unistd.h>
-#include <time.h>
-
-#include <vlc/vlc.h>
+#include <QOffscreenSurface>
 
 #include "RenderWindow.hpp"
 #include "RenderClient.hpp"
+
+#include <vlc/vlc.h>
+
 
 void init(void)
 {
@@ -55,7 +44,7 @@ int main(int argc, char** argv)
     view.setGeometry( 100, 100, 800, 600);
     view.show();
 
-    RenderClient interfaceClient((Window) view.winId());
+    RenderClient interfaceClient(&view);
     interfaceClient.show();
 
     server.setInterfaceClient(&interfaceClient, &view);
@@ -69,10 +58,10 @@ int main(int argc, char** argv)
     videoWidget->resize(800, 600);
     videoWidget->show();
 
-    RenderClient videoClient((Window) videoWidget->winId());
+    RenderClient videoClient(videoWidget->windowHandle());
     videoClient.show();
 
-    server.setVideoClient(&videoClient);
+    server.setVideoClient(&videoClient, videoWidget->windowHandle());
 
     libvlc_instance_t* vlc = libvlc_new(0, nullptr);
     auto m = libvlc_media_new_location(vlc, "file:///home/pierre/Videos/Doctor.Who.2005.S08E06.720p.HDTV.x265.mp4");
@@ -83,6 +72,11 @@ int main(int argc, char** argv)
 
     QObject::connect(&view, &QQuickView::afterRendering, [&]() {
         server.refresh();
+    });
+
+    QTimer t;
+    t.singleShot(3000, [&](){
+        view.resize(300, 200);
     });
 
     app.exec();

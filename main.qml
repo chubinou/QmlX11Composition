@@ -1,5 +1,5 @@
-import QtQuick 2.10
-import QtQuick.Window 2.10
+import QtQuick 2.11
+import QtQuick.Controls 2.11
 
 Rectangle {
     visible: true
@@ -22,15 +22,22 @@ Rectangle {
         }
     }
 
-    MouseArea {
-        anchors.fill: parent
-        onClicked: {
-            console.log("pop pop")
-        }
+    TextField {
+        text: "lol"
+        width: 200
+        anchors.left: parent.left
+        anchors.top: parent.top
     }
-    Keys.onPressed: {
-        console.log("yayaya")
-    }
+
+    //MouseArea {
+    //    anchors.fill: parent
+    //    onClicked: {
+    //        console.log("pop pop")
+    //    }
+    //}
+    //Keys.onPressed: {
+    //    console.log("yayaya")
+    //}
 
     Component.onCompleted: animation.start()
 }
