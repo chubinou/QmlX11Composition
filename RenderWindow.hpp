@@ -9,6 +9,7 @@
 
 
 class RenderClient;
+class OffscreenQmlView;
 class RenderWindow : public QWidget
 {
     Q_OBJECT
@@ -31,7 +32,7 @@ public:
         m_videoWindow = window;
     }
 
-    inline void setInterfaceClient(RenderClient* client, QWindow* window) {
+    inline void setInterfaceClient(RenderClient* client, OffscreenQmlView* window) {
         m_interfaceClient = client;
         m_interfaceWindow = window;
     }
@@ -45,7 +46,7 @@ protected:
 private:
     QWindow* m_videoWindow = nullptr;
     RenderClient* m_videoClient = nullptr;
-    QWindow* m_interfaceWindow = nullptr;
+    OffscreenQmlView* m_interfaceWindow = nullptr;
     RenderClient* m_interfaceClient = nullptr;
 
     Display* m_dpy = 0;

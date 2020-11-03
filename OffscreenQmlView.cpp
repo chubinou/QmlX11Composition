@@ -7,12 +7,14 @@
 
 #include "OffscreenQmlView.hpp"
 
-OffscreenQmlView::OffscreenQmlView(QScreen* screen)
+OffscreenQmlView::OffscreenQmlView(QWindow* window, QScreen* screen)
     : QWindow(screen)
 {
     bool ret;
 
     setSurfaceType(QWindow::OpenGLSurface);
+    setFlag(Qt::WindowType::BypassWindowManagerHint);
+    setFlag(Qt::WindowType::WindowTransparentForInput);
 
     QSurfaceFormat format;
     // Qt Quick may need a depth and stencil buffer. Always make sure these are available.
@@ -27,12 +29,13 @@ OffscreenQmlView::OffscreenQmlView(QScreen* screen)
     m_context->setFormat(format);
     ret = m_context->create();
 
-    m_uiRenderControl = new CompositorX11RenderControl(this);
+
+    m_uiRenderControl = new CompositorX11RenderControl(window);
 
     m_uiWindow = new QQuickWindow(m_uiRenderControl);
     m_uiWindow->setDefaultAlphaBuffer(true);
     m_uiWindow->setFormat(format);
-    m_uiWindow->setClearBeforeRendering(true);
+    m_uiWindow->setClearBeforeRendering(false);
 
 
     m_qmlEngine = new QQmlEngine();
@@ -81,8 +84,17 @@ void OffscreenQmlView::destroyFbo()
 
 void OffscreenQmlView::render()
 {
-    qDebug() << "render";
+    if (!isExposed())
+        return;
+    QSize realSize = size() * devicePixelRatio();
+
     m_context->makeCurrent(this);
+
+    m_context->functions()->glViewport(0, 0, realSize.width(), realSize.height());
+    m_context->functions()->glScissor( 0, 0, realSize.width(), realSize.height());
+    m_context->functions()->glEnable(GL_SCISSOR_TEST);
+    m_context->functions()->glClearColor(0.,0.,0.,0.);
+    m_context->functions()->glClear(GL_COLOR_BUFFER_BIT);
 
     m_uiRenderControl->polishItems();
     m_uiRenderControl->sync();
@@ -123,6 +135,126 @@ bool OffscreenQmlView::event(QEvent *event)
     }
 }
 
+
+static void remapInputMethodQueryEvent(QObject *object, QInputMethodQueryEvent *e)
+{
+    auto item = qobject_cast<QQuickItem *>(object);
+    if (!item)
+        return;
+    // Remap all QRectF values.
+    for (auto query : {Qt::ImCursorRectangle, Qt::ImAnchorRectangle, Qt::ImInputItemClipRectangle})
+    {
+        if (e->queries() & query)
+        {
+            auto value = e->value(query);
+            if (value.canConvert<QRectF>())
+                e->setValue(query, item->mapRectToScene(value.toRectF()));
+        }
+    }
+    // Remap all QPointF values.
+    if (e->queries() & Qt::ImCursorPosition)
+    {
+        auto value = e->value(Qt::ImCursorPosition);
+        if (value.canConvert<QPointF>())
+            e->setValue(Qt::ImCursorPosition, item->mapToScene(value.toPointF()));
+    }
+}
+
+bool OffscreenQmlView::handleWindowEvent(QEvent *event)
+{
+    switch (event->type()) {
+
+    case QEvent::Move:
+    case QEvent::Show:
+    {
+        QPoint windowPosition = mapToGlobal(QPoint(0,0));
+        if (m_uiWindow->position() != windowPosition)
+            m_uiWindow->setPosition(windowPosition);
+        break;
+    }
+
+    case QEvent::Resize:
+    {
+        QResizeEvent* resizeEvent = static_cast<QResizeEvent*>(event);
+        m_uiWindow->resize(resizeEvent->size());
+        resize( resizeEvent->size() );
+        resizeFbo();
+        break;
+    }
+
+    case QEvent::WindowActivate:
+    case QEvent::WindowDeactivate:
+    case QEvent::Leave:
+    {
+        qDebug()  << event;
+        return QCoreApplication::sendEvent(m_uiWindow, event);
+    }
+
+    case QEvent::Enter:
+    {
+        qDebug()  << event;
+        QEnterEvent *enterEvent = static_cast<QEnterEvent *>(event);
+        QEnterEvent mappedEvent(enterEvent->localPos(), enterEvent->windowPos(),
+                                enterEvent->screenPos());
+        bool ret = QCoreApplication::sendEvent(m_uiWindow, &mappedEvent);
+        event->setAccepted(mappedEvent.isAccepted());
+        return ret;
+    }
+
+    case QEvent::InputMethod:
+        return QCoreApplication::sendEvent(m_uiWindow->focusObject(), event);
+
+    case QEvent::InputMethodQuery:
+    {
+        bool eventResult = QCoreApplication::sendEvent(m_uiWindow->focusObject(), event);
+        // The result in focusObject are based on offscreenWindow. But
+        // the inputMethodTransform won't get updated because the focus
+        // is on QQuickWidget. We need to remap the value based on the
+        // widget.
+        remapInputMethodQueryEvent(m_uiWindow->focusObject(), static_cast<QInputMethodQueryEvent *>(event));
+        return eventResult;
+    }
+
+    case QEvent::MouseButtonPress:
+    case QEvent::MouseButtonRelease:
+    case QEvent::MouseButtonDblClick:
+    case QEvent::MouseMove:
+    {
+        QMouseEvent* mouseEvent = static_cast<QMouseEvent*>(event);
+        QMouseEvent mappedEvent(mouseEvent->type(), mouseEvent->localPos(),
+                                mouseEvent->localPos(), mouseEvent->screenPos(),
+                                mouseEvent->button(), mouseEvent->buttons(),
+                                mouseEvent->modifiers(), mouseEvent->source());
+        QCoreApplication::sendEvent(m_uiWindow, &mappedEvent);
+        return true;
+    }
+
+    case QEvent::Wheel:
+    case QEvent::HoverEnter:
+    case QEvent::HoverLeave:
+    case QEvent::HoverMove:
+    case QEvent::DragEnter:
+    case QEvent::DragMove:
+    case QEvent::DragLeave:
+    case QEvent::DragResponse:
+    case QEvent::Drop:
+        return QCoreApplication::sendEvent(m_uiWindow, event);
+
+    case QEvent::KeyPress:
+    case QEvent::KeyRelease:
+    {
+        return QCoreApplication::sendEvent(m_uiWindow, event);
+    }
+
+    case QEvent::ScreenChangeInternal:
+        m_uiWindow->setScreen(screen());
+        break;
+
+    default:
+        break;
+    }
+    return false;
+}
 
 void OffscreenQmlView::resizeFbo()
 {

@@ -5,6 +5,7 @@
 #include <QX11Info>
 #include "RenderWindow.hpp"
 #include "RenderClient.hpp"
+#include "OffscreenQmlView.hpp"
 
 #undef KeyPress
 #undef KeyRelease
@@ -20,6 +21,9 @@ RenderWindow::RenderWindow(QWidget *parent)
     m_dpy = QX11Info::display();
 
     m_wid = winId();
+
+    windowHandle()->
+            installEventFilter(this);
 }
 
 void RenderWindow::refresh()
@@ -81,94 +85,43 @@ static void remapInputMethodQueryEvent(QObject *object, QInputMethodQueryEvent *
 
 bool RenderWindow::eventFilter(QObject*, QEvent* event)
 {
-    if (!m_interfaceWindow)
-        return false;
+    if (m_videoWindow) {
+        switch (event->type()) {
 
-    qDebug() << "type: "  << event->type();
+        case QEvent::Move:
+        case QEvent::Show:
+        {
+            m_videoWindow->setPosition(pos());
+            refresh();
+            break;
+        }
+        case QEvent::Resize:
+        {
+            QResizeEvent* resizeEvent = static_cast<QResizeEvent*>(event);
+            m_videoWindow->resize(resizeEvent->size());
+            m_videoClient->geometryChanged();
+            break;
+        }
+        default: break;
+        }
+    }
+
+    bool ret = false;
+    if (m_interfaceWindow)
+        ret =  m_interfaceWindow->handleWindowEvent(event);
+
     switch (event->type()) {
 
     case QEvent::Move:
     case QEvent::Show:
-    {
-        //m_interfaceWindow->setPosition(pos());
-        refresh();
-        break;
-    }
-
     case QEvent::Resize:
-    {
-        QResizeEvent* resizeEvent = static_cast<QResizeEvent*>(event);
-        m_interfaceWindow->resize(resizeEvent->size());
-        m_videoWindow->resize(resizeEvent->size());
-
-        m_videoClient->geometryChanged();
         m_interfaceClient->geometryChanged();
         refresh();
         break;
-    }
-
-    case QEvent::WindowActivate:
-    case QEvent::WindowDeactivate:
-    case QEvent::Leave:
-        return QCoreApplication::sendEvent(m_interfaceWindow, event);
-    case QEvent::Enter:
-    {
-        QEnterEvent *enterEvent = static_cast<QEnterEvent *>(event);
-        QEnterEvent mappedEvent(enterEvent->localPos(), enterEvent->windowPos(),
-                                enterEvent->screenPos());
-        bool ret = QCoreApplication::sendEvent(m_interfaceWindow, &mappedEvent);
-        event->setAccepted(mappedEvent.isAccepted());
-        return ret;
-    }
-
-    case QEvent::InputMethod:
-        return QCoreApplication::sendEvent(m_interfaceWindow->focusObject(), event);
-    case QEvent::InputMethodQuery:
-    {
-        bool eventResult = QCoreApplication::sendEvent(m_interfaceWindow->focusObject(), event);
-        // The result in focusObject are based on offscreenWindow. But
-        // the inputMethodTransform won't get updated because the focus
-        // is on QQuickWidget. We need to remap the value based on the
-        // widget.
-        remapInputMethodQueryEvent(m_interfaceWindow->focusObject(), static_cast<QInputMethodQueryEvent *>(event));
-        return eventResult;
-    }
-
-    case QEvent::MouseButtonPress:
-    case QEvent::MouseButtonRelease:
-    case QEvent::MouseButtonDblClick:
-    case QEvent::MouseMove:
-    {
-        QMouseEvent* mouseEvent = static_cast<QMouseEvent*>(event);
-        QMouseEvent mappedEvent(mouseEvent->type(), mouseEvent->localPos(),
-                                mouseEvent->localPos(), mouseEvent->screenPos(),
-                                mouseEvent->button(), mouseEvent->buttons(),
-                                mouseEvent->modifiers(), mouseEvent->source());
-        QCoreApplication::sendEvent(m_interfaceWindow, &mappedEvent);
-        return true;
-    }
-    case QEvent::Wheel:
-    case QEvent::HoverEnter:
-    case QEvent::HoverLeave:
-    case QEvent::HoverMove:
-
-    case QEvent::DragEnter:
-    case QEvent::DragMove:
-    case QEvent::DragLeave:
-    case QEvent::DragResponse:
-    case QEvent::Drop:
-        return QCoreApplication::sendEvent(m_interfaceWindow, event);
-
-    case QEvent::KeyPress:
-    case QEvent::KeyRelease:
-        return QCoreApplication::sendEvent(m_interfaceWindow, event);
-
-    case QEvent::ScreenChangeInternal:
-        m_interfaceWindow->setScreen(windowHandle()->screen());
-        break;
     default: break;
     }
-    return false;
+
+    return ret;
 }
 
 Picture RenderWindow::getBackTexture() {

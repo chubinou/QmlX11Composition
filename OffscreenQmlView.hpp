@@ -34,10 +34,13 @@ class OffscreenQmlView : public QWindow //, protected QOpenGLFunctions
 {
     Q_OBJECT
 public:
-    explicit OffscreenQmlView(QScreen *screen = nullptr);
+    explicit OffscreenQmlView(QWindow* window, QScreen *screen = nullptr);
     ~OffscreenQmlView();
 
     virtual void render();
+
+    bool handleWindowEvent(QEvent *event);
+
 
     void setContent(QQmlComponent*,  QQuickItem* rootItem);
 
