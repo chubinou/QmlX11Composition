@@ -11,17 +11,28 @@ xdamage = dependency('xdamage')
 xext = dependency('xext')
 vlc = dependency('libvlc')
 
+resources = qt5.preprocess(
+    qresources: 'qml.qrc'
+    )
+
 moc_files = qt5.preprocess(
     moc_headers: [
+        'OffscreenQmlView.hpp',
         'RenderWindow.hpp',
         'RenderClient.hpp',
-    ],
-    qresources: 'qml.qrc')
+    ])
 
 executable('myprog',
     'main.cpp',
+    'OffscreenQmlView.cpp',
     'RenderWindow.cpp',
     'RenderClient.cpp',
-    moc_files,
+    moc_files, resources,
     dependencies : [qt5_dep, x11, xcomposite, xrender, xdamage, xext, vlc]
+)
+
+executable('onTop',
+    'always_on_top.cpp',
+    resources,
+    dependencies : [qt5_dep,  vlc]
 )

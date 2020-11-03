@@ -18,31 +18,8 @@ RenderWindow::RenderWindow(QWidget *parent)
     setAttribute(Qt::WA_NoSystemBackground);
 
     m_dpy = QX11Info::display();
-    int screen=DefaultScreen(m_dpy);
-    Visual *visual=DefaultVisual(m_dpy, screen);
-
-    XRenderPictFormat* fmt = XRenderFindVisualFormat(m_dpy, visual);
-    int depth = DefaultDepth(m_dpy, screen);
-    int width = DisplayWidth(m_dpy, screen);
-    int height = DisplayHeight(m_dpy, screen);
 
     m_wid = winId();
-
-    m_background = XCreatePixmap(m_dpy, m_wid, width, height, depth);
-    //XSelectInput(m_dpy, m_wid, StructureNotifyMask);
-    XSetWindowBackgroundPixmap(m_dpy, m_wid, m_background);
-    //XMapWindow(m_dpy, m_wid);
-
-    XRenderPictureAttributes pict_attr;
-    pict_attr.poly_edge=PolyEdgeSmooth;
-    pict_attr.poly_mode=PolyModeImprecise;
-    m_drawingarea = XRenderCreatePicture(m_dpy, m_background, fmt, CPPolyEdge|CPPolyMode,
-                                         &pict_attr);
-
-    installEventFilter(this);//this->windowHandle());
-
-    show();
-
 }
 
 void RenderWindow::refresh()
@@ -52,12 +29,14 @@ void RenderWindow::refresh()
     XGrabServer(m_dpy); //avoids tearing by locking the server
     XFlush(m_dpy);
 
+    Picture drawingarea = getBackTexture();
+
     int realW = width()  * devicePixelRatioF();
     int realH = height() * devicePixelRatioF();
 
     if (m_videoClient) {
         pic = m_videoClient->getPicture();
-        XRenderComposite(m_dpy, PictOpOver, pic, 0, m_drawingarea,
+        XRenderComposite(m_dpy, PictOpOver, pic, 0, drawingarea,
                          0,0, 0, 0,
                          0, 0, realW, realH);
     }
@@ -96,7 +75,7 @@ static void remapInputMethodQueryEvent(QObject *object, QInputMethodQueryEvent *
         auto value = e->value(Qt::ImCursorPosition);
         if (value.canConvert<QPointF>())
             e->setValue(Qt::ImCursorPosition, item->mapToScene(value.toPointF()));
-    }
+    }   
 }
 
 
@@ -190,6 +169,31 @@ bool RenderWindow::eventFilter(QObject*, QEvent* event)
     default: break;
     }
     return false;
+}
+
+Picture RenderWindow::getBackTexture() {
+    if (m_drawingarea)
+        return m_drawingarea;
+
+    int screen=DefaultScreen(m_dpy);
+    Visual *visual=DefaultVisual(m_dpy, screen);
+    XRenderPictFormat* fmt = XRenderFindVisualFormat(m_dpy, visual);
+    int depth = DefaultDepth(m_dpy, screen);
+    int width = DisplayWidth(m_dpy, screen);
+    int height = DisplayHeight(m_dpy, screen);
+
+    m_background = XCreatePixmap(m_dpy, m_wid, width, height, depth);
+    //XSelectInput(m_dpy, m_wid, StructureNotifyMask);
+    XSetWindowBackgroundPixmap(m_dpy, m_wid, m_background);
+    //XMapWindow(m_dpy, m_wid);
+
+    XRenderPictureAttributes pict_attr;
+    pict_attr.poly_edge=PolyEdgeSmooth;
+    pict_attr.poly_mode=PolyModeImprecise;
+    m_drawingarea = XRenderCreatePicture(m_dpy, m_background, fmt, CPPolyEdge|CPPolyMode,
+                                         &pict_attr);
+
+    return m_drawingarea;
 }
 
 void RenderWindow::paintEvent(QPaintEvent* event)

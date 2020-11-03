@@ -24,9 +24,7 @@ public:
         return m_wid;
     }
 
-    inline Picture getBackTexture() {
-        return m_drawingarea;
-    }
+    Picture getBackTexture();
 
     inline void setVideoClient(RenderClient* client, QWindow* window) {
         m_videoClient = client;

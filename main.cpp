@@ -2,6 +2,8 @@
 #include <QQmlApplicationEngine>
 #include <QQuickWindow>
 #include <QQuickView>
+#include <QOpenGLContext>
+#include <QQmlComponent>
 #include <QWidget>
 #include <QTimer>
 #include <QX11Info>
@@ -9,6 +11,7 @@
 
 #include "RenderWindow.hpp"
 #include "RenderClient.hpp"
+#include "OffscreenQmlView.hpp"
 
 #include <vlc/vlc.h>
 
@@ -31,53 +34,66 @@ int main(int argc, char** argv)
     assert(QX11Info::isPlatformX11());
     init();
 
-    RenderWindow server;
 
-    QQuickView view;
-    view.setDefaultAlphaBuffer(true);
-    view.setSource(QUrl(QStringLiteral("qrc:///main.qml")));
-    view.setClearBeforeRendering(true);
-    view.setFlag(Qt::WindowType::BypassWindowManagerHint);
-    view.setFlag(Qt::WindowType::WindowTransparentForInput);
-    view.setColor(QColor(Qt::transparent));
-    view.setResizeMode( QQuickView::SizeRootObjectToView );
-    view.setGeometry( 100, 100, 800, 600);
-    view.show();
 
-    RenderClient interfaceClient(&view);
+    //QQuickView* qmlview = new QQuickView();
+    //qmlview->setDefaultAlphaBuffer(true);
+    //qmlview->setSource(QUrl(QStringLiteral("qrc:///main.qml")));
+    //qmlview->setClearBeforeRendering(false);
+    //qmlview->setFlag(Qt::WindowType::BypassWindowManagerHint);
+    //qmlview->setFlag(Qt::WindowType::WindowTransparentForInput);
+    //qmlview->setColor(QColor(Qt::transparent));
+    //qmlview->setResizeMode( QQuickView::SizeRootObjectToView );
+    //qmlview->setGeometry( 100, 100, 800, 600);
+    //qmlview->show();
+
+    OffscreenQmlView* qmlview = new OffscreenQmlView();
+    qmlview->setFlag(Qt::WindowType::BypassWindowManagerHint);
+    qmlview->setFlag(Qt::WindowType::WindowTransparentForInput);
+    QQmlEngine* engine = qmlview->engine();
+    QQmlComponent* component = new QQmlComponent(engine, QStringLiteral("qrc:///main.qml"), QQmlComponent::PreferSynchronous, engine);
+    QObject* rootObject = component->create();
+    qmlview->setContent(component, (QQuickItem*)rootObject);
+    qmlview->resize(800, 600);
+    qmlview->setPosition(800, 600);
+    qmlview->show();
+    qmlview->winId();
+
+    RenderClient interfaceClient(qmlview);
     interfaceClient.show();
 
-    server.setInterfaceClient(&interfaceClient, &view);
+    RenderWindow server;
+    server.setInterfaceClient(&interfaceClient, qmlview);
+    server.show();
 
+   QWidget* videoWidget = new QWidget();
 
-    QWidget* videoWidget = new QWidget();
+   videoWidget->setAttribute(Qt::WA_NativeWindow);
+   videoWidget->setWindowFlag(Qt::WindowType::BypassWindowManagerHint);
+   videoWidget->setWindowFlag(Qt::WindowType::WindowTransparentForInput);
+   videoWidget->resize(800, 600);
+   videoWidget->show();
 
-    videoWidget->setAttribute(Qt::WA_NativeWindow);
-    videoWidget->setWindowFlag(Qt::WindowType::BypassWindowManagerHint);
-    videoWidget->setWindowFlag(Qt::WindowType::WindowTransparentForInput);
-    videoWidget->resize(800, 600);
-    videoWidget->show();
+   RenderClient videoClient(videoWidget->windowHandle());
+   videoClient.show();
 
-    RenderClient videoClient(videoWidget->windowHandle());
-    videoClient.show();
+   server.setVideoClient(&videoClient, videoWidget->windowHandle());
 
-    server.setVideoClient(&videoClient, videoWidget->windowHandle());
+   libvlc_instance_t* vlc = libvlc_new(0, nullptr);
+   auto m = libvlc_media_new_location(vlc, "file:///home/pierre/Videos/Doctor.Who.2005.S08E06.720p.HDTV.x265.mp4");
+   libvlc_media_player_t* mp = libvlc_media_player_new_from_media(m);
+   libvlc_media_release (m);
+   libvlc_media_player_set_xwindow(mp, videoWidget->winId());
+   libvlc_media_player_play (mp);
 
-    libvlc_instance_t* vlc = libvlc_new(0, nullptr);
-    auto m = libvlc_media_new_location(vlc, "file:///home/pierre/Videos/Doctor.Who.2005.S08E06.720p.HDTV.x265.mp4");
-    libvlc_media_player_t* mp = libvlc_media_player_new_from_media(m);
-    libvlc_media_release (m);
-    libvlc_media_player_set_xwindow(mp, videoWidget->winId());
-    libvlc_media_player_play (mp);
+   QObject::connect(qmlview, &OffscreenQmlView::afterRendering, [&]() {
+       server.refresh();
+   });
 
-    QObject::connect(&view, &QQuickView::afterRendering, [&]() {
-        server.refresh();
-    });
-
-    QTimer t;
-    t.singleShot(3000, [&](){
-        view.resize(300, 200);
-    });
+   //QTimer t;
+   //t.singleShot(3000, [&](){
+   //    qmlview->resize(300, 200);
+   //});
 
     app.exec();
 
