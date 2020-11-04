@@ -39,7 +39,7 @@ int main(int argc, char** argv)
     QObject* rootObject = component->create();
     qmlview->setContent(component, (QQuickItem*)rootObject);
     qmlview->resize(800, 600);
-    qmlview->setPosition(800, 600);
+    qmlview->setOpacity(0);
     qmlview->winId();
     qmlview->show();
 
@@ -48,6 +48,7 @@ int main(int argc, char** argv)
     videoWidget->setAttribute(Qt::WA_NativeWindow);
     videoWidget->setWindowFlag(Qt::WindowType::BypassWindowManagerHint);
     videoWidget->setWindowFlag(Qt::WindowType::WindowTransparentForInput);
+    videoWidget->windowHandle()->setOpacity(0);
     videoWidget->resize(800, 600);
     videoWidget->winId();
     videoWidget->show();

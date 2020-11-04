@@ -33,9 +33,6 @@ inline std::unique_ptr<T, void (*)(void*)> wrap_cptr( T* ptr ) noexcept
     return wrap_cptr( ptr, &free );
 }
 
-int firstDamageEvent;
-int firstDamageError;
-
 bool queryExtension(const QString& name, int* first_event_out, int* first_error_out)
 {
     xcb_connection_t* c = QX11Info::connection();
@@ -117,7 +114,6 @@ bool RenderWindow::init()
 void RenderWindow::refresh(size_t requestId)
 {
     if (requestId != m_refresh_request) {
-        qDebug() << "ignore refresh request" << requestId;
         return;
     }
     //xcb_render_picture_t pic;
@@ -215,19 +211,12 @@ bool RenderWindow::nativeEventFilter(const QByteArray& eventType, void* message,
 {
     if (eventType == "xcb_generic_event_t") {
         xcb_generic_event_t* ev = static_cast<xcb_generic_event_t *>(message);
+
         if ((ev->response_type & 0x7F) == (m_xdamageBaseEvent + XCB_DAMAGE_NOTIFY)) {
             xcb_damage_notify_event_t* damageEvent = static_cast<xcb_damage_notify_event_t*>(message);
-            bool requestRefresh = false;
-            if (damageEvent->drawable == m_wid) {
-                qDebug() << "self damage";
-            } else if (damageEvent->drawable == m_interfaceWindow->winId()) {
-                requestRefresh = true;
-            } else if (damageEvent->drawable == m_videoWindow->winId()) {
-                requestRefresh = true;
-            } else {
-                qDebug() << "damage event" << damageEvent->drawable;
-            }
-            if (requestRefresh) {
+            if (damageEvent->drawable == m_interfaceWindow->winId()
+                || damageEvent->drawable == m_videoWindow->winId())
+            {
                 size_t requestId = m_refresh_request;
                 QMetaObject::invokeMethod(this, [this, requestId]() {
                     refresh(requestId);
@@ -279,14 +268,4 @@ void RenderWindow::paintEvent(QPaintEvent* event)
     qDebug() << "paintEvent";
     QWidget::paintEvent(event);
     refresh(m_refresh_request);
-}
-
-void RenderWindow::keyPressEvent(QKeyEvent* ev)
-{
-    qDebug() << "You Pressed Key " << ev->text();
-}
-
-void RenderWindow::keyReleaseEvent(QKeyEvent* ev)
-{
-    qDebug() << "You Pressed Key " << ev->text();
 }

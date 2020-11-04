@@ -45,8 +45,6 @@ public:
 protected:
     bool nativeEventFilter(const QByteArray &eventType, void *message, long *result) override;
     void paintEvent(QPaintEvent *event) override;
-    void keyPressEvent(QKeyEvent *ev) override;
-    void keyReleaseEvent(QKeyEvent *ev) override;
 
 
 private:

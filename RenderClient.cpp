@@ -17,10 +17,25 @@ RenderClient::RenderClient(QWindow* window, QObject *parent)
     XGetWindowAttributes( m_dpy, m_wid, &m_attr );
 
     //reparent the window to the Composite overlay to hide it from other compositor?
-    Window cow = XCompositeGetOverlayWindow(m_dpy, DefaultRootWindow(m_dpy));
-    XReparentWindow(m_dpy, m_wid, cow, 0,0);
+    //Window cow = XCompositeGetOverlayWindow(m_dpy, m_wid);
+    //XReparentWindow(m_dpy, m_wid, cow, 0,0);
+    //XCompositeReleaseOverlayWindow(m_dpy, cow);
+    //XUnmapWindow(m_dpy, cow);
+    //XDestroyWindow(m_dpy, cow);
 
     XCompositeRedirectWindow(m_dpy, m_wid, CompositeRedirectManual);
+
+    //Window cow = XCompositeGetOverlayWindow(m_dpy, m_wid);
+    //XShapeCombineRectangles(m_dpy,
+    //                          cow,
+    //                          ShapeInput,
+    //                          0,     // x_off
+    //                          0,     // y_off
+    //                          NULL,  // rectangles
+    //                          0,     // n_rects
+    //                          ShapeSet,
+    //                          Unsorted);
+    //XReparentWindow(m_dpy, m_wid, cow, 0, 0);
 
     m_format = XRenderFindVisualFormat( m_dpy, m_attr.visual );
     xcb_damage_damage_t dam = xcb_generate_id(m_conn);
