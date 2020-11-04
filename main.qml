@@ -7,6 +7,8 @@ Rectangle {
     border.width: 5
     border.color: "blue"
 
+    property bool rotateText: true
+
     Text {
         id: text
         text: input.text
@@ -17,10 +19,13 @@ Rectangle {
             id: animation
             target: text
             property: "rotation"
+            running: rotateText
             from: 0; to: 360; duration: 5000
             loops: Animation.Infinite
         }
     }
+
+
 
     TextField {
         id:input
@@ -30,12 +35,13 @@ Rectangle {
         anchors.top: parent.top
     }
 
-    //MouseArea {
-    //    anchors.fill: parent
-    //    onClicked: {
-    //        console.log("pop pop")
-    //    }
-    //}
+    Button {
+        text: "rotate"
+        onClicked: rotateText = !rotateText
+        anchors.left: parent.left
+        anchors.top: input.bottom
+    }
+
     Keys.onPressed: {
         console.log("yayaya")
     }

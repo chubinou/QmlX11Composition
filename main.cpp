@@ -1,3 +1,5 @@
+#include <memory>
+
 #include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QQuickWindow>
@@ -8,6 +10,11 @@
 #include <QTimer>
 #include <QX11Info>
 #include <QOffscreenSurface>
+#include <xcb/xcbext.h>
+#include <xcb/render.h>
+#include <xcb/damage.h>
+#include <xcb/composite.h>
+
 
 #include "RenderWindow.hpp"
 #include "RenderClient.hpp"
@@ -15,26 +22,16 @@
 
 #include <vlc/vlc.h>
 
-
-void init(void)
-{
-    Display *dpy = QX11Info::display();
-
-    int render_event_base, render_error_base;
-    int render_present=XRenderQueryExtension(dpy, &render_event_base, &render_error_base);
-    if (!render_present)
-        printf("RENDER extension missing\n");
-}
-
-
 int main(int argc, char** argv)
 {
     QApplication app(argc, argv);
 
     assert(QX11Info::isPlatformX11());
-    init();
 
     RenderWindow server;
+    if (!server.init()) {
+        return -1;
+    }
 
     OffscreenQmlView* qmlview = new OffscreenQmlView(server.windowHandle());
     QQmlEngine* engine = qmlview->engine();
@@ -43,16 +40,16 @@ int main(int argc, char** argv)
     qmlview->setContent(component, (QQuickItem*)rootObject);
     qmlview->resize(800, 600);
     qmlview->setPosition(800, 600);
-    qmlview->show();
     qmlview->winId();
+    qmlview->show();
 
 
     QWidget* videoWidget = new QWidget();
-
     videoWidget->setAttribute(Qt::WA_NativeWindow);
     videoWidget->setWindowFlag(Qt::WindowType::BypassWindowManagerHint);
     videoWidget->setWindowFlag(Qt::WindowType::WindowTransparentForInput);
     videoWidget->resize(800, 600);
+    videoWidget->winId();
     videoWidget->show();
 
     libvlc_instance_t* vlc = libvlc_new(0, nullptr);
@@ -61,8 +58,6 @@ int main(int argc, char** argv)
     libvlc_media_release (m);
     libvlc_media_player_set_xwindow(mp, videoWidget->winId());
     libvlc_media_player_play (mp);
-
-
 
     RenderClient interfaceClient(qmlview);
     interfaceClient.show();
@@ -73,10 +68,6 @@ int main(int argc, char** argv)
     server.setVideoClient(&videoClient, videoWidget->windowHandle());
 
     server.show();
-
-    QObject::connect(qmlview, &OffscreenQmlView::afterRendering, [&]() {
-        server.refresh();
-    });
 
     app.exec();
 

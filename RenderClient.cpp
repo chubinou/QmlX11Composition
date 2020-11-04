@@ -7,50 +7,25 @@
 RenderClient::RenderClient(QWindow* window, QObject *parent)
     : QObject(parent)
     , m_window(window)
+    , m_conn(QX11Info::connection())
     , m_dpy (QX11Info::display())
     , m_wid(window->winId())
     , m_pixmap(m_dpy)
     , m_picture(m_dpy)
     , m_damage(m_dpy)
-    , m_shapeRegion(m_dpy)
-    , m_visibleRegion(m_dpy)
 {
-
-    //XSetWindowAttributes attr;
-    //int baseEventMask = 0
-    //        | ExposureMask
-    //        | SubstructureNotifyMask
-    //        | PropertyChangeMask
-    //        | FocusChangeMask
-    //        ;
-    //
-    //int defaultEventMask = baseEventMask
-    //       | KeyPressMask | KeyReleaseMask
-    //       | ButtonPressMask | ButtonReleaseMask
-    //       | EnterWindowMask | LeaveWindowMask
-    //       | PointerMotionMask | PointerMotionHintMask
-    //       | ButtonMotionMask
-    //       | Button1MotionMask | Button2MotionMask | Button3MotionMask | Button4MotionMask | Button5MotionMask
-    //       | KeymapStateMask
-    //       | StructureNotifyMask
-    //        ;
-    //int transparentForInputEventMask = baseEventMask
-    //        | VisibilityChangeMask
-    //        | ResizeRedirectMask
-    //        | SubstructureRedirectMask
-    //        | ColormapChangeMask
-    //        | OwnerGrabButtonMask
-    //        ;
-    //attr.event_mask = transparentForInputEventMask;
-    //attr.override_redirect = true;
-    //XChangeWindowAttributes(m_dpy, m_wid, CWEventMask|CWOverrideRedirect , &attr);
-
     XGetWindowAttributes( m_dpy, m_wid, &m_attr );
+
+    //reparent the window to the Composite overlay to hide it from other compositor?
+    Window cow = XCompositeGetOverlayWindow(m_dpy, DefaultRootWindow(m_dpy));
+    XReparentWindow(m_dpy, m_wid, cow, 0,0);
 
     XCompositeRedirectWindow(m_dpy, m_wid, CompositeRedirectManual);
 
     m_format = XRenderFindVisualFormat( m_dpy, m_attr.visual );
-    m_damage = XDamageCreate( m_dpy, m_wid, XDamageReportNonEmpty );
+    xcb_damage_damage_t dam = xcb_generate_id(m_conn);
+    xcb_damage_create(m_conn, dam, m_wid, XCB_DAMAGE_REPORT_LEVEL_RAW_RECTANGLES);
+    //m_damage = XDamageCreate( m_dpy, m_wid, XDamageReportNonEmpty );
 
     // Make sure we get notified when the window shape is changed
     XShapeSelectInput( m_dpy, m_wid, ShapeNotifyMask );
@@ -96,8 +71,6 @@ void RenderClient::geometryChanged()
 {
     qDebug() << "resize";
 
-    m_shapeRegion.reset();
-
     //if ( width() != newGeometry.width() || height() != newGeometry.height() )
     {
         m_pixmap.reset();
@@ -111,7 +84,7 @@ void RenderClient::geometryChanged()
     //    return;
     //
     //// Create an empty region and initialize it with the current visible region
-    //XserverRegionPtr damage{ m_dpy, XFixesCreateRegion( m_dpy, 0, 0  ) };
+
     //if ( m_visibleRegion )
     //    XFixesCopyRegion( m_dpy, damage.get(), m_visibleRegion.get() );
     //

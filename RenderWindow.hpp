@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QWidget>
+#include <QAbstractNativeEventFilter>
 
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrender.h>
@@ -10,13 +11,15 @@
 
 class RenderClient;
 class OffscreenQmlView;
-class RenderWindow : public QWidget
+class RenderWindow : public QWidget, public QAbstractNativeEventFilter
 {
     Q_OBJECT
 public:
     explicit RenderWindow(QWidget *parent = nullptr);
 
-    void refresh();
+    bool init();
+
+    void refresh(size_t requestId);
 
     bool eventFilter(QObject *, QEvent *event) override;
 
@@ -37,7 +40,10 @@ public:
         m_interfaceWindow = window;
     }
 
+
+
 protected:
+    bool nativeEventFilter(const QByteArray &eventType, void *message, long *result) override;
     void paintEvent(QPaintEvent *event) override;
     void keyPressEvent(QKeyEvent *ev) override;
     void keyReleaseEvent(QKeyEvent *ev) override;
@@ -53,6 +59,10 @@ private:
     Window m_wid = 0;
     Pixmap m_background = 0;
     Picture m_drawingarea = 0;
+
+    int m_xdamageBaseEvent;
+
+    size_t m_refresh_request = 0;
 
 };
 

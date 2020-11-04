@@ -10,6 +10,10 @@
 #include <X11/extensions/Xdamage.h>
 #include <X11/extensions/shape.h>
 
+#include <xcb/render.h>
+#include <xcb/damage.h>
+#include <xcb/xfixes.h>
+
 template<typename T, typename R, R RELEASE>
 class X11Resource {
 public:
@@ -74,7 +78,7 @@ public:
 using  PixmapPtr = X11Resource<Pixmap, decltype(&XFreePixmap), XFreePixmap>;
 using  DamagePtr = X11Resource<Damage, decltype(&XDamageDestroy), XDamageDestroy>;
 using  PicturePtr = X11Resource<Picture, decltype(&XRenderFreePicture), XRenderFreePicture>;
-using  XserverRegionPtr = X11Resource<XserverRegion, decltype(&XFixesDestroyRegion), XFixesDestroyRegion>;
+using  RegionPtr = X11Resource<XserverRegion, decltype(&XFixesDestroyRegion), XFixesDestroyRegion>;
 
 class RenderClient : public QObject
 {
@@ -97,13 +101,13 @@ public slots:
 private:
     QWindow* m_window = nullptr;
 
+    xcb_connection_t* m_conn = 0;
     Display* m_dpy = 0;
     Window m_wid = 0;
     PixmapPtr m_pixmap;
     PicturePtr m_picture;
     DamagePtr m_damage;
-    XserverRegionPtr m_shapeRegion;
-    XserverRegionPtr m_visibleRegion;
+
     XRenderPictFormat* m_format;
     XWindowAttributes m_attr;
 
