@@ -57,3 +57,5 @@ Known issues
 * multi screen is not handled at the moment
 
 * there are some visual glitches when resizing
+
+* closing the window won't close the program properly, do a Ctrl-C
