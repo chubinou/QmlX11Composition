@@ -15,7 +15,23 @@ on ubuntu/debian something like this should work
       meson \
       qtbase5-dev qtdeclarative5-dev libqt5x11extras5-dev qml-module-qtquick-controls2 \
       libxcb-composite0-dev libxcb-damage0-dev  libxcb-render0-dev \
-      libvlc-dev
+      libvlc-dev vlc-plugin-base vlc-plugin-video-output
+```
+
+
+build with
+
+```
+cd /path/to/repo
+meson build
+cd build
+ninja
+```
+
+then run
+
+```
+./myprog
 ```
 
 What to report
@@ -45,9 +61,9 @@ What to report
 
   * if you know it, what backend is it using (xrender, opengl)
 
-* what is your X11 version  
+* what is your X11 version
 
-* Do you have a 3D controler. 
+* Do you have a 3D controler.
 
 please report your results here: https://lite.framacalc.org/9jwy-qmlx11composition
 
