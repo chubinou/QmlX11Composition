@@ -66,6 +66,13 @@ RenderWindow::RenderWindow(QWidget *parent)
 
 bool RenderWindow::init()
 {
+
+    if (!QX11Info::isPlatformX11()) {
+        qDebug() << "this program only runs on X11 plateforms, if you are running wayland you can try to run it with XWayland using:";
+        qDebug() << "    export QT_QPA_PLATFORM=xcb";
+        return false;
+    }
+
     //m_dpy = QX11Info::display();
     m_conn = QX11Info::connection();
 

@@ -8,13 +8,12 @@
 #include <QQmlComponent>
 #include <QWidget>
 #include <QTimer>
-#include <QX11Info>
 #include <QOffscreenSurface>
+
 #include <xcb/xcbext.h>
 #include <xcb/render.h>
 #include <xcb/damage.h>
 #include <xcb/composite.h>
-
 
 #include "RenderWindow.hpp"
 #include "RenderClient.hpp"
@@ -25,12 +24,9 @@
 //const char* defaultFilePath = "file:///home/pierre/Videos/Doctor.Who.2005.S08E06.720p.HDTV.x265.mp4";
 const char* defaultFilePath = "https://streams.videolan.org/streams/mkv/Dexter.s04e12.720p.hdtv.x264-red.mkv";
 
-
 int main(int argc, char** argv)
 {
     QApplication app(argc, argv);
-
-    assert(QX11Info::isPlatformX11());
 
     RenderWindow server;
     if (!server.init()) {
