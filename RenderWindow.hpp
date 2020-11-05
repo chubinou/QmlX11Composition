@@ -7,6 +7,7 @@
 
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrender.h>
+#include <xcb/xcb.h>
 
 
 class RenderClient;
@@ -53,9 +54,10 @@ private:
     OffscreenQmlView* m_interfaceWindow = nullptr;
     RenderClient* m_interfaceClient = nullptr;
 
-    Display* m_dpy = 0;
+    //Display* m_dpy = 0;
+    xcb_connection_t* m_conn = nullptr;
     Window m_wid = 0;
-    Pixmap m_background = 0;
+    xcb_pixmap_t m_background = 0;
     Picture m_drawingarea = 0;
 
     int m_xdamageBaseEvent;

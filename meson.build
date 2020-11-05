@@ -4,11 +4,11 @@ qt5_dep = dependency('qt5', modules: ['Core', 'Gui', 'QuickWidgets', 'X11Extras'
 
 pkg = import('pkgconfig')
 
-x11 = dependency('x11')
-xcomposite = dependency('xcomposite')
-xrender = dependency('xrender')
-xdamage = dependency('xdamage')
-xext = dependency('xext')
+#x11 = dependency('x11')
+#xcomposite = dependency('xcomposite')
+#xrender = dependency('xrender')
+#xdamage = dependency('xdamage')
+#xext = dependency('xext')
 xcb = dependency('xcb')
 xcb_render = dependency('xcb-render')
 xcb_damage = dependency('xcb-damage')
@@ -28,9 +28,10 @@ executable('myprog',
     'OffscreenQmlView.cpp',
     'RenderWindow.cpp',
     'RenderClient.cpp',
+    'X11Utils.cpp',
     moc_files,
-    dependencies : [qt5_dep, x11,
-            xcomposite, xrender, xdamage, xext,
+    dependencies : [qt5_dep,
+            #x11, xcomposite, xrender, xdamage, xext,
             xcb, xcb_composite, xcb_damage, xcb_render,
             vlc]
 )

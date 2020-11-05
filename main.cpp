@@ -22,6 +22,10 @@
 
 #include <vlc/vlc.h>
 
+//const char* defaultFilePath = "file:///home/pierre/Videos/Doctor.Who.2005.S08E06.720p.HDTV.x265.mp4";
+const char* defaultFilePath = "https://streams.videolan.org/streams/mkv/Dexter.s04e12.720p.hdtv.x264-red.mkv";
+
+
 int main(int argc, char** argv)
 {
     QApplication app(argc, argv);
@@ -53,8 +57,11 @@ int main(int argc, char** argv)
     videoWidget->winId();
     videoWidget->show();
 
+    const char* path = defaultFilePath;
+    if (argc > 1)
+        path = argv[1];
     libvlc_instance_t* vlc = libvlc_new(0, nullptr);
-    auto m = libvlc_media_new_location(vlc, "file:///home/pierre/Videos/Doctor.Who.2005.S08E06.720p.HDTV.x265.mp4");
+    auto m = libvlc_media_new_location(vlc, path);
     libvlc_media_player_t* mp = libvlc_media_player_new_from_media(m);
     libvlc_media_release (m);
     libvlc_media_player_set_xwindow(mp, videoWidget->winId());
