@@ -7,8 +7,8 @@
 #include <QOpenGLContext>
 #include <QQmlComponent>
 #include <QWidget>
-#include <QTimer>
 #include <QOffscreenSurface>
+#include <QtGlobal>
 
 #include <xcb/xcbext.h>
 #include <xcb/render.h>
@@ -24,9 +24,30 @@
 //const char* defaultFilePath = "file:///home/pierre/Videos/Doctor.Who.2005.S08E06.720p.HDTV.x265.mp4";
 const char* defaultFilePath = "https://streams.videolan.org/streams/mkv/Dexter.s04e12.720p.hdtv.x264-red.mkv";
 
+void errorHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
+{
+    switch (type) {
+        case QtDebugMsg:
+            fprintf(stderr, "%s\n", msg.toUtf8().constData());
+            break;
+        case QtWarningMsg:
+            fprintf(stderr, "\033[1;33mWarning\033[0m: %s\n", msg.toUtf8().constData());
+            break;
+        case QtCriticalMsg:
+            fprintf(stderr, "\033[31mCritical\033[0m: %s\n", msg.toUtf8().constData());
+            break;
+        case QtFatalMsg:
+            fprintf(stderr, "\033[31mFatal\033[0m: %s\n", msg.toUtf8().constData());
+            abort();
+        break;
+        default: break;
+    }
+}
+
 int main(int argc, char** argv)
 {
     QApplication app(argc, argv);
+    qInstallMessageHandler(errorHandler);
 
     RenderWindow server;
     if (!server.init()) {

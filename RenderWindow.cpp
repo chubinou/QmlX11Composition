@@ -26,11 +26,11 @@ static bool queryExtension(xcb_connection_t* conn, const QString& name, int* fir
     auto reply = wrap_cptr(xcb_query_extension_reply(conn, cookie, &error));
     auto errorPtr = wrap_cptr(error);
     if (errorPtr || !reply) {
-        qDebug() << "Querying extension " << name << " failed";
+        qWarning() << "Querying extension " << name << " failed";
         return false;
     }
     if (!reply->present) {
-        qDebug() << "Extension " << name << " is not present";
+        qWarning() << "Extension " << name << " is not present";
         return false;
     }
 
@@ -46,10 +46,10 @@ do { \
     xcb_ ## extension  ##_query_version_cookie_t cookie = xcb_## extension  ##_query_version(c, minor, major); \
     auto reply = wrap_cptr(xcb_## extension  ##_query_version_reply(c, cookie, 0)); \
     if (!reply) { \
-        printf("%s extension missing\n", #extension); \
+        qWarning() << #extension  << " extension missing"; \
         return false; \
     } \
-    printf("%s version %i.%i\n", #extension,  reply->major_version, reply->minor_version); \
+    qDebug() << #extension<< " version " << reply->major_version << "." <<  reply->minor_version; \
 } while(0)
 
 
@@ -68,8 +68,8 @@ bool RenderWindow::init()
 {
 
     if (!QX11Info::isPlatformX11()) {
-        qDebug() << "this program only runs on X11 plateforms, if you are running wayland you can try to run it with XWayland using:";
-        qDebug() << "    export QT_QPA_PLATFORM=xcb";
+        qWarning() << "this program only runs on X11 plateforms, if you are running wayland you can try to run it with XWayland using:";
+        qWarning() << "    export QT_QPA_PLATFORM=xcb";
         return false;
     }
 
@@ -274,7 +274,7 @@ Picture RenderWindow::getBackTexture() {
     voidCookie =  xcb_create_pixmap_checked(m_conn, depth, m_background, m_wid, width, height);
     err.reset(xcb_request_check(m_conn, voidCookie));
     if (err) {
-        qDebug() << " error: xcb_create_pixmap "<< err->error_code;
+        qWarning() << " error: xcb_create_pixmap "<< err->error_code;
         return 0;
     }
     //m_background = XCreatePixmap(m_dpy, m_wid, width, height, depth);
@@ -283,7 +283,7 @@ Picture RenderWindow::getBackTexture() {
     voidCookie = xcb_change_window_attributes_checked(m_conn, m_wid, XCB_CW_BACK_PIXMAP, attributeList);
     err.reset(xcb_request_check(m_conn, voidCookie));
     if (err) {
-        qDebug() << "error: xcb_change_window_attributes_checked"<< err->error_code;
+        qWarning() << "error: xcb_change_window_attributes_checked"<< err->error_code;
         return 0;
     }
     //XSetWindowBackgroundPixmap(m_dpy, m_wid, m_background);
@@ -293,7 +293,7 @@ Picture RenderWindow::getBackTexture() {
     xcb_render_create_picture_checked(m_conn, m_drawingarea, m_background, fmt , 0, nullptr);
     err.reset(xcb_request_check(m_conn, voidCookie));
     if (err) {
-        qDebug() << "error: xcb_change_window_attributes_checked"<< err->error_code;
+        qWarning() << "error: xcb_change_window_attributes_checked"<< err->error_code;
         return 0;
     }
     //m_drawingarea = XRenderCreatePicture(m_dpy, m_background, fmt, 0, nullptr);
