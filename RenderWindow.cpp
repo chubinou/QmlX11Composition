@@ -91,8 +91,7 @@ bool RenderWindow::init()
     CHECK_EXTENSION_VERSION(m_conn, composite, 0, 4);
     CHECK_EXTENSION_VERSION(m_conn, render, XCB_RENDER_MAJOR_VERSION, XCB_RENDER_MINOR_VERSION);
 
-    windowHandle()->
-            installEventFilter(this);
+    windowHandle()->installEventFilter(this);
 
     qApp->installNativeEventFilter(this);
 

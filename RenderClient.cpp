@@ -73,20 +73,28 @@ void RenderClient::show()
 
 void RenderClient::createPicture()
 {
-    ;
+    xcb_void_cookie_t voidCookie;
     auto err = wrap_cptr<xcb_generic_error_t>(nullptr);
 
     if ( !m_pixmap ) {
         m_pixmap = xcb_generate_id(m_conn);
-        xcb_composite_name_window_pixmap(m_conn, m_wid, m_pixmap.get());
+        voidCookie = xcb_composite_name_window_pixmap_checked(m_conn, m_wid, m_pixmap.get());
+        err.reset(xcb_request_check(m_conn, voidCookie));
+        if (err)
+        {
+            qWarning() << "can't create pixmap";
+            m_pixmap.reset();
+            return;
+        }
         //m_pixmap = XCompositeNameWindowPixmap( m_dpy, m_wid );
     }
 
     m_picture = xcb_generate_id(m_conn);
-    xcb_void_cookie_t voidCookie = xcb_render_create_picture_checked(m_conn, m_picture.get(), m_pixmap.get(), m_format, 0, 0);
+    voidCookie = xcb_render_create_picture_checked(m_conn, m_picture.get(), m_pixmap.get(), m_format, 0, 0);
     err.reset(xcb_request_check(m_conn, voidCookie));
     if (err)
     {
+        qWarning() << "can't create picture";
         m_pixmap.reset();
         m_picture.reset();
     }

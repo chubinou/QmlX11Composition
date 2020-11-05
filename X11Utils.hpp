@@ -80,6 +80,8 @@ using  DamagePtr = X11Resource<xcb_damage_damage_t, decltype(&xcb_damage_destroy
 using  PixmapPtr = X11Resource<xcb_pixmap_t, decltype(&xcb_free_pixmap), xcb_free_pixmap>;
 using  PicturePtr = X11Resource<xcb_render_picture_t, decltype(&xcb_render_free_picture), xcb_render_free_picture>;
 using  RegionPtr = X11Resource<xcb_xfixes_region_t, decltype(&xcb_xfixes_destroy_region), xcb_xfixes_destroy_region>;
+using  WindowPtr = X11Resource<xcb_window_t, decltype(&xcb_destroy_window), xcb_destroy_window>;
+
 
 //using  PixmapPtr = X11Resource<Pixmap, decltype(&XFreePixmap), XFreePixmap>;
 //using  DamagePtr = X11Resource<Damage, decltype(&XDamageDestroy), XDamageDestroy>;
