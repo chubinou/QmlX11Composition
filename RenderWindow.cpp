@@ -105,7 +105,7 @@ void RenderWindow::refresh(size_t requestId)
         return;
     }
     //xcb_render_picture_t pic;
-    Picture pic;
+    xcb_render_picture_t pic;
 
     //xcb_grab_server(m_conn);
     xcb_flush(m_conn);
@@ -236,7 +236,7 @@ bool RenderWindow::nativeEventFilter(const QByteArray& eventType, void* message,
 //}
 
 
-Picture RenderWindow::getBackTexture() {
+xcb_render_picture_t RenderWindow::getBackTexture() {
     if (m_drawingarea)
         return m_drawingarea;
 

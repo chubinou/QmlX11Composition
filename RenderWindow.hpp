@@ -5,9 +5,8 @@
 #include <QWidget>
 #include <QAbstractNativeEventFilter>
 
-#include <X11/Xlib.h>
-#include <X11/extensions/Xrender.h>
 #include <xcb/xcb.h>
+#include <xcb/render.h>
 
 
 class RenderClient;
@@ -25,11 +24,11 @@ public:
     bool eventFilter(QObject *, QEvent *event) override;
 
 
-    inline Window getWindow() {
+    inline xcb_window_t getWindow() {
         return m_wid;
     }
 
-    Picture getBackTexture();
+    xcb_render_picture_t getBackTexture();
 
     inline void setVideoClient(RenderClient* client, QWindow* window) {
         m_videoClient = client;
@@ -56,9 +55,9 @@ private:
 
     //Display* m_dpy = 0;
     xcb_connection_t* m_conn = nullptr;
-    Window m_wid = 0;
+    xcb_window_t m_wid = 0;
     xcb_pixmap_t m_background = 0;
-    Picture m_drawingarea = 0;
+    xcb_render_picture_t m_drawingarea = 0;
 
     int m_xdamageBaseEvent;
 

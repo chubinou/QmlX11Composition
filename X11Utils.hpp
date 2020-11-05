@@ -3,6 +3,7 @@
 #include <xcb/damage.h>
 #include <xcb/xfixes.h>
 #include <xcb/render.h>
+#include <cstdlib>
 
 template <typename T, typename Releaser>
 inline auto wrap_cptr( T* ptr, Releaser&& r ) noexcept
