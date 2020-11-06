@@ -145,7 +145,7 @@ void RenderWindow::refresh(unsigned short requestId)
     }
 
 
-    xcb_clear_area(m_conn, 0 /* exposure ??? */, m_wid, 0, 0, realW, realH);
+    xcb_clear_area(m_conn, 0 /* exposure ??? */, m_wid, 0, 0, 0, 0);
     //xcb_ungrab_server(m_conn);
     //XClearArea(m_dpy, m_wid, 0, 0, realW, realH, 0);
     //XUngrabServer(m_dpy);
