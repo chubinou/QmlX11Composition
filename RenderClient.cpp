@@ -4,6 +4,7 @@
 
 #undef None
 
+#define _NET_WM_BYPASS_COMPOSITOR_NAME "_NET_WM_BYPASS_COMPOSITOR"
 
 RenderClient::RenderClient(QWindow* window, QObject *parent)
     : QObject(parent)
@@ -15,6 +16,13 @@ RenderClient::RenderClient(QWindow* window, QObject *parent)
     , m_picture(m_conn)
     , m_damage(m_conn)
 {
+    xcb_intern_atom_cookie_t atomCookie = xcb_intern_atom(m_conn, false, strlen(_NET_WM_BYPASS_COMPOSITOR_NAME), _NET_WM_BYPASS_COMPOSITOR_NAME);
+    auto atomReply = wrap_cptr(xcb_intern_atom_reply(m_conn, atomCookie, nullptr));
+    xcb_atom_t _NET_WM_BYPASS_COMPOSITOR = atomReply->atom;
+    uint32_t val = 1;
+    xcb_change_property(m_conn, XCB_PROP_MODE_REPLACE, m_wid,
+                        _NET_WM_BYPASS_COMPOSITOR, XCB_ATOM_CARDINAL, 32, 1, &val);
+
     xcb_get_window_attributes_cookie_t attrCookie = xcb_get_window_attributes(m_conn, m_wid);
     auto attrReply = wrap_cptr(xcb_get_window_attributes_reply(m_conn, attrCookie, nullptr));
     xcb_visualid_t visual = attrReply->visual;
