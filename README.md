@@ -12,8 +12,8 @@ on ubuntu/debian something like this should work
 
 ```
   sudo apt install \
-      meson \
-      qtbase5-dev qtdeclarative5-dev libqt5x11extras5-dev qml-module-qtquick-controls2 \
+      meson g++ pkg-config \
+      qtdeclarative5-dev libqt5x11extras5-dev qml-module-qtquick2 qml-module-qtquick-controls2 \
       libxcb-composite0-dev libxcb-damage0-dev  libxcb-render0-dev \
       libvlc-dev vlc-plugin-base vlc-plugin-video-output
 ```
