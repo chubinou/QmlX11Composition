@@ -99,9 +99,9 @@ bool RenderWindow::init()
 }
 
 
-void RenderWindow::refresh(size_t requestId)
+void RenderWindow::refresh(unsigned short requestId)
 {
-    if (requestId != m_refresh_request) {
+    if (requestId != m_refreshRequestId) {
         return;
     }
     //xcb_render_picture_t pic;
@@ -150,7 +150,15 @@ void RenderWindow::refresh(size_t requestId)
     //XClearArea(m_dpy, m_wid, 0, 0, realW, realH, 0);
     //XUngrabServer(m_dpy);
 
-    m_refresh_request++;
+    m_refreshRequestId++;
+}
+
+void RenderWindow::requestRefresh()
+{
+    size_t requestId = m_refreshRequestId;
+    QMetaObject::invokeMethod(this, [this, requestId]() {
+        refresh(requestId);
+    }, Qt::QueuedConnection);
 }
 
 
@@ -163,7 +171,6 @@ bool RenderWindow::eventFilter(QObject*, QEvent* event)
         case QEvent::Show:
         {
             //m_videoWindow->setPosition(pos());
-            refresh(m_refresh_request);
             break;
         }
         case QEvent::Resize:
@@ -184,10 +191,12 @@ bool RenderWindow::eventFilter(QObject*, QEvent* event)
     switch (event->type()) {
 
     case QEvent::Move:
+        return false;
+        break;
     case QEvent::Show:
     case QEvent::Resize:
         m_interfaceClient->geometryChanged();
-        refresh(m_refresh_request);
+        requestRefresh();
         break;
     default: break;
     }
@@ -205,10 +214,7 @@ bool RenderWindow::nativeEventFilter(const QByteArray& eventType, void* message,
             if (damageEvent->drawable == m_interfaceWindow->winId()
                 || damageEvent->drawable == m_videoWindow->winId())
             {
-                size_t requestId = m_refresh_request;
-                QMetaObject::invokeMethod(this, [this, requestId]() {
-                    refresh(requestId);
-                }, Qt::QueuedConnection);
+                requestRefresh();
             }
 
             return false;  // filter out this event, stop its processing
@@ -216,25 +222,6 @@ bool RenderWindow::nativeEventFilter(const QByteArray& eventType, void* message,
     }
     return false;
 }
-
-
-//static xcb_render_pictformat_t findVisualFormat(xcb_connection_t* conn, int depth)
-//{
-//    xcb_render_query_pict_formats_cookie_t formatCookie = xcb_render_query_pict_formats(conn);
-//    auto formatReply = wrap_cptr(xcb_render_query_pict_formats_reply(conn,formatCookie, nullptr));
-//    if (!formatReply)
-//        return 0;
-//
-//    xcb_render_pictforminfo_iterator_t iter = xcb_render_query_pict_formats_formats_iterator(formatReply.get());
-//    while (iter.rem > 0) {
-//        if (iter.data->depth == depth) {
-//            return iter.data->id;
-//        }
-//        xcb_render_pictforminfo_next(&iter);
-//    }
-//    return 0;
-//}
-
 
 xcb_render_picture_t RenderWindow::getBackTexture() {
     if (m_drawingarea)
@@ -305,5 +292,5 @@ void RenderWindow::paintEvent(QPaintEvent* event)
 {
     qDebug() << "paintEvent";
     QWidget::paintEvent(event);
-    refresh(m_refresh_request);
+    requestRefresh();
 }

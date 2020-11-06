@@ -19,7 +19,9 @@ public:
 
     bool init();
 
-    void refresh(size_t requestId);
+    void refresh(unsigned short requestId);
+
+    void requestRefresh();
 
     bool eventFilter(QObject *, QEvent *event) override;
 
@@ -61,7 +63,7 @@ private:
 
     int m_xdamageBaseEvent;
 
-    size_t m_refresh_request = 0;
+    unsigned short m_refreshRequestId = 0;
 
 };
 
