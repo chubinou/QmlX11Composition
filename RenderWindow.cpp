@@ -15,10 +15,6 @@
 #include "RenderClient.hpp"
 #include "OffscreenQmlView.hpp"
 
-//#undef KeyPress
-//#undef KeyRelease
-//#undef None
-
 static bool queryExtension(xcb_connection_t* conn, const QString& name, int* first_event_out, int* first_error_out)
 {
     xcb_query_extension_cookie_t cookie = xcb_query_extension(conn, (uint16_t)name.size(), name.toUtf8().constData());
@@ -55,6 +51,9 @@ do { \
 
 RenderWindow::RenderWindow(QWidget *parent)
     : QWidget(parent)
+    , m_conn(QX11Info::connection())
+    , m_background(m_conn)
+    , m_drawingarea(m_conn)
 {
     setAttribute(Qt::WA_NativeWindow);
     setAttribute(Qt::WA_OpaquePaintEvent);
@@ -63,18 +62,22 @@ RenderWindow::RenderWindow(QWidget *parent)
     m_wid = winId();
 }
 
+RenderWindow::~RenderWindow()
+{
+    if (m_videoClient)
+        m_videoClient.reset();
+    if (m_interfaceClient)
+        m_interfaceClient.reset();
+}
+
 
 bool RenderWindow::init()
 {
-
     if (!QX11Info::isPlatformX11()) {
         qWarning() << "this program only runs on X11 plateforms, if you are running wayland you can try to run it with XWayland using:";
         qWarning() << "    export QT_QPA_PLATFORM=xcb";
         return false;
     }
-
-    //m_dpy = QX11Info::display();
-    m_conn = QX11Info::connection();
 
     bool ret;
 
@@ -104,16 +107,11 @@ void RenderWindow::refresh(unsigned short requestId)
     if (requestId != m_refreshRequestId) {
         return;
     }
-    //xcb_render_picture_t pic;
     xcb_render_picture_t pic;
 
     //xcb_grab_server(m_conn);
     xcb_flush(m_conn);
-    //XGrabServer(m_dpy); //avoids tearing by locking the server
-    //XFlush(m_dpy);
-
     xcb_render_picture_t drawingarea = getBackTexture();
-    //Picture drawingarea = getBackTexture();
 
     int realW = width()  * devicePixelRatioF();
     int realH = height() * devicePixelRatioF();
@@ -125,9 +123,6 @@ void RenderWindow::refresh(unsigned short requestId)
                                  pic, 0, drawingarea,
                                  0,0,0,0,
                                  0,0, realW, realH);
-            //XRenderComposite(m_dpy, PictOpOver, pic, 0, drawingarea,
-            //             0,0, 0, 0,
-            //             0, 0, realW, realH);
         }
     }
 
@@ -138,17 +133,16 @@ void RenderWindow::refresh(unsigned short requestId)
                                  pic, 0, drawingarea,
                                  0,0,0,0,
                                  0,0, realW, realH);
-            //XRenderComposite(m_dpy, PictOpOver, pic, 0, m_drawingarea,
-            //             0,0, 0, 0,
-            //             0, 0, realW, realH);
         }
     }
 
+    xcb_render_color_t color1 = { 0x0000, 0xFFFF, 0x0000, 0xFFFF };
+    xcb_render_color_t color2 = { 0x0000, 0x0000, 0xFFFF, 0xFFFF };
+    xcb_rectangle_t rect = {10, 100, 20, 20};
+    xcb_render_fill_rectangles(m_conn, XCB_RENDER_PICT_OP_OVER, drawingarea,
+                               m_refreshRequestId %2 ? color1 : color2, 1, &rect);
 
     xcb_clear_area(m_conn, 0 /* exposure ??? */, m_wid, 0, 0, 0, 0);
-    //xcb_ungrab_server(m_conn);
-    //XClearArea(m_dpy, m_wid, 0, 0, realW, realH, 0);
-    //XUngrabServer(m_dpy);
 
     m_refreshRequestId++;
 }
@@ -225,22 +219,15 @@ bool RenderWindow::nativeEventFilter(const QByteArray& eventType, void* message,
 
 xcb_render_picture_t RenderWindow::getBackTexture() {
     if (m_drawingarea)
-        return m_drawingarea;
+        return m_drawingarea.get();
 
     xcb_void_cookie_t voidCookie;
     auto err = wrap_cptr<xcb_generic_error_t>(nullptr);
 
-
-    //int screen=DefaultScreen(m_dpy);
-    //Visual *visual = DefaultVisual(m_dpy, screen);
-    //int depth = DefaultDepth(m_dpy, screen);
-    //int width = DisplayWidth(m_dpy, screen);
-    //int height = DisplayHeight(m_dpy, screen);
     xcb_screen_t* screen = xcb_setup_roots_iterator(xcb_get_setup(m_conn)).data;
     int width = screen->width_in_pixels;
     int height = screen->height_in_pixels;
 
-    //XRenderPictFormat* fmt = XRenderFindVisualFormat(m_dpy, visual);
     xcb_get_window_attributes_cookie_t attrCookie = xcb_get_window_attributes(m_conn, m_wid);
     auto attrReply = wrap_cptr(xcb_get_window_attributes_reply(m_conn, attrCookie, nullptr));
     xcb_visualid_t visual = attrReply->visual;
@@ -249,43 +236,47 @@ xcb_render_picture_t RenderWindow::getBackTexture() {
     xcb_render_pictformat_t fmt;
     findVisualFormat(m_conn, visual, &fmt, &depth);
 
-    //xcb_render_pictformat_t fmt = findVisualFormat(m_conn, depth);
-
     qDebug() << "FORMAT is " << fmt
              << " height " << height
              << " height " << width
              << " depth " << depth;
 
     //TODO dynamically alloc backTexture size
-    m_background = xcb_generate_id(m_conn);
-    voidCookie =  xcb_create_pixmap_checked(m_conn, depth, m_background, m_wid, width, height);
+    m_background.generateId();
+    voidCookie =  xcb_create_pixmap_checked(m_conn, depth, m_background.get(), m_wid, width, height);
     err.reset(xcb_request_check(m_conn, voidCookie));
     if (err) {
         qWarning() << " error: xcb_create_pixmap "<< err->error_code;
         return 0;
     }
-    //m_background = XCreatePixmap(m_dpy, m_wid, width, height, depth);
 
-    uint32_t attributeList[] = {m_background};
+    uint32_t attributeList[] = {m_background.get()};
     voidCookie = xcb_change_window_attributes_checked(m_conn, m_wid, XCB_CW_BACK_PIXMAP, attributeList);
     err.reset(xcb_request_check(m_conn, voidCookie));
     if (err) {
         qWarning() << "error: xcb_change_window_attributes_checked"<< err->error_code;
         return 0;
     }
-    //XSetWindowBackgroundPixmap(m_dpy, m_wid, m_background);
 
-
-    m_drawingarea = xcb_generate_id(m_conn);
-    xcb_render_create_picture_checked(m_conn, m_drawingarea, m_background, fmt , 0, nullptr);
+    m_drawingarea.generateId();
+    xcb_render_create_picture_checked(m_conn, m_drawingarea.get(), m_background.get(), fmt , 0, nullptr);
     err.reset(xcb_request_check(m_conn, voidCookie));
     if (err) {
         qWarning() << "error: xcb_change_window_attributes_checked"<< err->error_code;
         return 0;
     }
-    //m_drawingarea = XRenderCreatePicture(m_dpy, m_background, fmt, 0, nullptr);
 
-    return m_drawingarea;
+    return m_drawingarea.get();
+}
+
+void RenderWindow::setVideoWindow( QWindow* window) {
+    m_videoClient.reset(new RenderClient(window));
+    m_videoWindow = window;
+}
+
+void RenderWindow::setInterfaceWindow(OffscreenQmlView* window) {
+    m_interfaceClient.reset(new RenderClient(window));
+    m_interfaceWindow = window;
 }
 
 void RenderWindow::paintEvent(QPaintEvent* event)

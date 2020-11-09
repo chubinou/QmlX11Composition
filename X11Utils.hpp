@@ -1,3 +1,5 @@
+#ifndef X11_UTILS_HPP
+#define X11_UTILS_HPP
 #include <memory>
 
 #include <xcb/damage.h>
@@ -42,8 +44,14 @@ public:
 
     ~X11Resource()
     {
+        if (!m_conn)
+            return;
         if (xid)
             RELEASE(m_conn, xid);
+    }
+
+    void generateId() {
+        reset(xcb_generate_id(m_conn));
     }
 
     X11Resource &operator=(const X11Resource &other) = delete;
@@ -71,7 +79,6 @@ public:
     }
 
     T get() const { return xid; }
-    //operator T() const { return xid; }
 
     xcb_connection_t* m_conn;
     T xid = 0;
@@ -90,3 +97,8 @@ using  WindowPtr = X11Resource<xcb_window_t, decltype(&xcb_destroy_window), xcb_
 //using  RegionPtr = X11Resource<XserverRegion, decltype(&XFixesDestroyRegion), XFixesDestroyRegion>;
 
 bool findVisualFormat(xcb_connection_t*  conn, xcb_visualid_t visual, xcb_render_pictformat_t* fmtOut, uint8_t* depthOut);
+
+
+xcb_atom_t getInternAtom(xcb_connection_t*  conn, const char* atomName);
+
+#endif /* X11_UTILS_HPP */

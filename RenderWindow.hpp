@@ -7,6 +7,7 @@
 
 #include <xcb/xcb.h>
 #include <xcb/render.h>
+#include "X11Utils.hpp"
 
 
 class RenderClient;
@@ -16,6 +17,7 @@ class RenderWindow : public QWidget, public QAbstractNativeEventFilter
     Q_OBJECT
 public:
     explicit RenderWindow(QWidget *parent = nullptr);
+    ~RenderWindow();
 
     bool init();
 
@@ -32,17 +34,8 @@ public:
 
     xcb_render_picture_t getBackTexture();
 
-    inline void setVideoClient(RenderClient* client, QWindow* window) {
-        m_videoClient = client;
-        m_videoWindow = window;
-    }
-
-    inline void setInterfaceClient(RenderClient* client, OffscreenQmlView* window) {
-        m_interfaceClient = client;
-        m_interfaceWindow = window;
-    }
-
-
+    void setVideoWindow(QWindow* window);
+    void setInterfaceWindow(OffscreenQmlView* window);
 
 protected:
     bool nativeEventFilter(const QByteArray &eventType, void *message, long *result) override;
@@ -51,15 +44,14 @@ protected:
 
 private:
     QWindow* m_videoWindow = nullptr;
-    RenderClient* m_videoClient = nullptr;
+    std::unique_ptr<RenderClient> m_videoClient;
     OffscreenQmlView* m_interfaceWindow = nullptr;
-    RenderClient* m_interfaceClient = nullptr;
+    std::unique_ptr<RenderClient> m_interfaceClient;
 
-    //Display* m_dpy = 0;
     xcb_connection_t* m_conn = nullptr;
     xcb_window_t m_wid = 0;
-    xcb_pixmap_t m_background = 0;
-    xcb_render_picture_t m_drawingarea = 0;
+    PixmapPtr m_background;
+    PicturePtr m_drawingarea;
 
     int m_xdamageBaseEvent;
 

@@ -1,4 +1,5 @@
 #include "X11Utils.hpp"
+#include <cstring>
 
 bool findVisualFormat(xcb_connection_t* conn, xcb_visualid_t visual,
                   xcb_render_pictformat_t* formatOut = nullptr,
@@ -36,4 +37,13 @@ bool findVisualFormat(xcb_connection_t* conn, xcb_visualid_t visual,
     }
 
     return false;
+}
+
+xcb_atom_t getInternAtom(xcb_connection_t* conn, const char* atomName)
+{
+    xcb_intern_atom_cookie_t atomCookie = xcb_intern_atom(conn, false, strlen(atomName), atomName);
+    auto atomReply = wrap_cptr(xcb_intern_atom_reply(conn, atomCookie, nullptr));
+    if (!atomReply)
+        return 0;
+    return atomReply->atom;
 }

@@ -84,14 +84,8 @@ int main(int argc, char** argv)
     libvlc_media_player_set_xwindow(mp, videoWidget->winId());
     libvlc_media_player_play (mp);
 
-    RenderClient interfaceClient(qmlview);
-    interfaceClient.show();
-    server.setInterfaceClient(&interfaceClient, qmlview);
-
-    RenderClient videoClient(videoWidget->windowHandle());
-    videoClient.show();
-    server.setVideoClient(&videoClient, videoWidget->windowHandle());
-
+    server.setInterfaceWindow(qmlview);
+    server.setVideoWindow(videoWidget->windowHandle());
     server.show();
 
     app.exec();

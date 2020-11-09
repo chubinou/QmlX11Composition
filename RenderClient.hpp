@@ -16,8 +16,6 @@ public:
 
     ~RenderClient();
 
-    void show();
-
     void createPicture();
 
     xcb_render_picture_t getPicture();
@@ -29,15 +27,12 @@ private:
     QWindow* m_window = nullptr;
 
     xcb_connection_t* m_conn = 0;
-    //Display* m_dpy = 0;
     xcb_window_t m_wid = 0;
     PixmapPtr m_pixmap;
     PicturePtr m_picture;
     DamagePtr m_damage;
 
-    //XRenderPictFormat* m_format;
     xcb_render_pictformat_t m_format;
-    //XWindowAttributes m_attr;
 
     bool m_sourceClipValid = false;
 };
