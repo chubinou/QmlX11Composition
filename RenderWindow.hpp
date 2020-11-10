@@ -50,7 +50,6 @@ private:
 
     xcb_connection_t* m_conn = nullptr;
     xcb_window_t m_wid = 0;
-    PixmapPtr m_background;
     PicturePtr m_drawingarea;
 
     int m_xdamageBaseEvent;

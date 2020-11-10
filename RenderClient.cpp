@@ -18,13 +18,8 @@ RenderClient::RenderClient(QWindow* window, QObject *parent)
     , m_picture(m_conn)
     , m_damage(m_conn)
 {
-    xcb_atom_t _NET_WM_BYPASS_COMPOSITOR = getInternAtom(m_conn, _NET_WM_BYPASS_COMPOSITOR_NAME);
-    xcb_atom_t _NET_WM_STATE = getInternAtom(m_conn, _NET_WM_STATE_NAME);
-    xcb_atom_t _NET_WM_STATE_HIDDEN = getInternAtom(m_conn, _NET_WM_STATE_HIDDEN_NAME);
-
-    uint32_t val = 1;
-    xcb_change_property(m_conn, XCB_PROP_MODE_REPLACE, m_wid,
-                        _NET_WM_BYPASS_COMPOSITOR, XCB_ATOM_CARDINAL, 32, 1, &val);
+    //xcb_atom_t _NET_WM_STATE = getInternAtom(m_conn, _NET_WM_STATE_NAME);
+    //xcb_atom_t _NET_WM_STATE_HIDDEN = getInternAtom(m_conn, _NET_WM_STATE_HIDDEN_NAME);
 
     xcb_get_window_attributes_cookie_t attrCookie = xcb_get_window_attributes(m_conn, m_wid);
     auto attrReply = wrap_cptr(xcb_get_window_attributes_reply(m_conn, attrCookie, nullptr));
@@ -46,11 +41,10 @@ RenderClient::RenderClient(QWindow* window, QObject *parent)
     xcb_damage_damage_t dam = xcb_generate_id(m_conn);
     xcb_damage_create(m_conn, dam, m_wid, XCB_DAMAGE_REPORT_LEVEL_RAW_RECTANGLES);
 
-    //xcb_unmap_window(m_conn, m_wid);
-
-
+    xcb_atom_t _NET_WM_BYPASS_COMPOSITOR = getInternAtom(m_conn, _NET_WM_BYPASS_COMPOSITOR_NAME);
+    uint32_t val = 1;
     xcb_change_property(m_conn, XCB_PROP_MODE_REPLACE, m_wid,
-                        _NET_WM_STATE, XCB_ATOM_ATOM, 32, 1, &_NET_WM_STATE_HIDDEN);
+                        _NET_WM_BYPASS_COMPOSITOR, XCB_ATOM_CARDINAL, 32, 1, &val);
 
     connect(window, &QWindow::widthChanged, this, &RenderClient::geometryChanged);
     connect(window, &QWindow::heightChanged, this, &RenderClient::geometryChanged);
@@ -93,13 +87,7 @@ void RenderClient::createPicture()
 xcb_render_picture_t RenderClient::getPicture()
 {
     //if (!m_picture)
-        createPicture();
-    //if ( !m_sourceClipValid ) {
-    //    XserverRegion clip = XFixesCreateRegionFromWindow( m_dpy, m_wid, WindowRegionBounding );
-    //    XFixesSetPictureClipRegion( m_dpy, m_picture.get(), 0, 0, clip );
-    //    XFixesDestroyRegion( m_dpy, clip );
-    //    m_sourceClipValid = true;
-    //}
+    createPicture();
     return m_picture.get();
 }
 

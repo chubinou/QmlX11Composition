@@ -52,7 +52,6 @@ do { \
 RenderWindow::RenderWindow(QWidget *parent)
     : QWidget(parent)
     , m_conn(QX11Info::connection())
-    , m_background(m_conn)
     , m_drawingarea(m_conn)
 {
     setAttribute(Qt::WA_NativeWindow);
@@ -142,7 +141,7 @@ void RenderWindow::refresh(unsigned short requestId)
     xcb_render_fill_rectangles(m_conn, XCB_RENDER_PICT_OP_OVER, drawingarea,
                                m_refreshRequestId %2 ? color1 : color2, 1, &rect);
 
-    xcb_clear_area(m_conn, 0 /* exposure ??? */, m_wid, 0, 0, 0, 0);
+    xcb_clear_area(m_conn, 0, m_wid, 0, 0, 0, 0);
 
     m_refreshRequestId++;
 }
@@ -211,7 +210,7 @@ bool RenderWindow::nativeEventFilter(const QByteArray& eventType, void* message,
                 requestRefresh();
             }
 
-            return false;  // filter out this event, stop its processing
+            return true;  // filter out this event, stop its processing
         }
     }
     return false;
@@ -242,27 +241,28 @@ xcb_render_picture_t RenderWindow::getBackTexture() {
              << " depth " << depth;
 
     //TODO dynamically alloc backTexture size
-    m_background.generateId();
-    voidCookie =  xcb_create_pixmap_checked(m_conn, depth, m_background.get(), m_wid, width, height);
+    PixmapPtr  background{ m_conn};
+    background.generateId();
+    voidCookie =  xcb_create_pixmap_checked(m_conn, depth, background.get(), m_wid, width, height);
     err.reset(xcb_request_check(m_conn, voidCookie));
     if (err) {
-        qWarning() << " error: xcb_create_pixmap "<< err->error_code;
+        qWarning() << " error: xcb_create_pixmap " << err->error_code;
         return 0;
     }
 
-    uint32_t attributeList[] = {m_background.get()};
+    uint32_t attributeList[] = {background.get()};
     voidCookie = xcb_change_window_attributes_checked(m_conn, m_wid, XCB_CW_BACK_PIXMAP, attributeList);
     err.reset(xcb_request_check(m_conn, voidCookie));
     if (err) {
-        qWarning() << "error: xcb_change_window_attributes_checked"<< err->error_code;
+        qWarning() << "error: xcb_change_window_attributes_checked" << err->error_code;
         return 0;
     }
 
     m_drawingarea.generateId();
-    xcb_render_create_picture_checked(m_conn, m_drawingarea.get(), m_background.get(), fmt , 0, nullptr);
+    xcb_render_create_picture_checked(m_conn, m_drawingarea.get(), background.get(), fmt, 0, nullptr);
     err.reset(xcb_request_check(m_conn, voidCookie));
     if (err) {
-        qWarning() << "error: xcb_change_window_attributes_checked"<< err->error_code;
+        qWarning() << "error: xcb_change_window_attributes_checked" << err->error_code;
         return 0;
     }
 
@@ -270,11 +270,14 @@ xcb_render_picture_t RenderWindow::getBackTexture() {
 }
 
 void RenderWindow::setVideoWindow( QWindow* window) {
+    window->setParent(windowHandle());
     m_videoClient.reset(new RenderClient(window));
     m_videoWindow = window;
 }
 
 void RenderWindow::setInterfaceWindow(OffscreenQmlView* window) {
+    //window->setParent(windowHandle());
+    xcb_reparent_window(m_conn, window->winId(), windowHandle()->winId(), 0, 0);
     m_interfaceClient.reset(new RenderClient(window));
     m_interfaceWindow = window;
 }

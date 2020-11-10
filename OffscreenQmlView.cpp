@@ -13,8 +13,7 @@ OffscreenQmlView::OffscreenQmlView(QWindow* window, QScreen* screen)
     bool ret;
 
     setSurfaceType(QWindow::OpenGLSurface);
-    setFlag(Qt::WindowType::BypassWindowManagerHint);
-    setFlag(Qt::WindowType::WindowTransparentForInput);
+
 
     QSurfaceFormat format;
     // Qt Quick may need a depth and stencil buffer. Always make sure these are available.
